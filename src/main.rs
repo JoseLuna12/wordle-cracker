@@ -343,6 +343,10 @@ async fn main() {
         _ => Langs::En,
     };
 
+    // let first_time = true;
+
+    // loop {
+    // }
     match action.as_str() {
         "firstLetter" => wordle_obj = WordleCLI::new(Actions::FirstLetter, input, lang),
         "lastLetter" => wordle_obj = WordleCLI::new(Actions::LastLetter, input, lang),
@@ -368,4 +372,5 @@ async fn main() {
     }
     let duration = start.elapsed();
     println!("Time elapsed {:?}", duration);
+    // first_time = false;
 }
