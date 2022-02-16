@@ -21,7 +21,7 @@ suported languages:
 - staticLetters
 
 #### input
-- <a>
-- <a,b,c,d>
-- <hello,words,test>
-- <_ e _ l _> (hello, no spaces)
+- < a >
+- < a,b,c,d >
+- < hello,words,test >
+- < _ e _ l _ > (hello, no spaces)
