@@ -174,6 +174,7 @@ async fn get_words<'l>(lang: &'l Langs) -> Result<Vec<String>, Box<dyn std::erro
     match lang {
         Langs::Es => {
             for query in 1..40 {
+                println!("{} quering words...", query);
                 match query_web_scrapping(&query_values, query.to_string()).await {
                     Ok(value) => {
                         for v in value {
@@ -363,6 +364,10 @@ async fn main() {
         }
 
         match action.as_str() {
+            "help" => {
+                println!("commands: firstLetter, lastLetter, contains, contain, incorrectWords, pattern, staticLetters");
+                break;
+            }
             "firstLetter" => wordle_obj = WordleCLI::new(Actions::FirstLetter, &input, &lang),
             "lastLetter" => wordle_obj = WordleCLI::new(Actions::LastLetter, &input, &lang),
             "contains" => wordle_obj = WordleCLI::new(Actions::Contains, &input, &lang),
