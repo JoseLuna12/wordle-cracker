@@ -250,16 +250,16 @@ enum Actions {
     NoAction,
 }
 
-struct WordleCLI {
+struct WordleCLI<'l> {
     action: Actions,
     clean_input: Vec<String>,
-    lang: Langs,
+    lang: &'l Langs,
 }
 
-impl WordleCLI {
-    pub fn new(action: Actions, raw_input: String, lang: Langs) -> Self {
+impl WordleCLI<'l, T> {
+    pub fn new(action: Actions, raw_input: &String, lang: &'l Langs) -> Self {
         WordleCLI {
-            clean_input: WordleCLI::clean_raw_input(&action, String::from(&raw_input)),
+            clean_input: WordleCLI::clean_raw_input(&action, String::from(raw_input)),
             action,
             lang,
         }
@@ -336,41 +336,39 @@ async fn main() {
     let action = std::env::args().nth(2).expect("no action given");
     let input = std::env::args().nth(3).expect("no input given");
 
-    let wordle_obj: WordleCLI;
+    let mut wordle_obj: WordleCLI;
     let lang: Langs = match lang_input.as_str() {
         "es" => Langs::Es,
         "en" => Langs::En,
         _ => Langs::En,
     };
 
-    // let first_time = true;
+    let first_time = true;
 
-    // loop {
-    // }
-    match action.as_str() {
-        "firstLetter" => wordle_obj = WordleCLI::new(Actions::FirstLetter, input, lang),
-        "lastLetter" => wordle_obj = WordleCLI::new(Actions::LastLetter, input, lang),
-        "containsLetters" => wordle_obj = WordleCLI::new(Actions::Contains, input, lang),
-        "containSingleLetter" => wordle_obj = WordleCLI::new(Actions::Contain, input, lang),
-        "filterByIncorrectWords" => {
-            wordle_obj = WordleCLI::new(Actions::IncorrectWords, input, lang)
+    loop {
+        match action.as_str() {
+            "firstLetter" => wordle_obj = WordleCLI::new(Actions::FirstLetter, &input, &lang),
+            "lastLetter" => wordle_obj = WordleCLI::new(Actions::LastLetter, input, lang),
+            "containsLetters" => wordle_obj = WordleCLI::new(Actions::Contains, input, lang),
+            "containSingleLetter" => wordle_obj = WordleCLI::new(Actions::Contain, input, lang),
+            "filterByIncorrectWords" => {
+                wordle_obj = WordleCLI::new(Actions::IncorrectWords, input, lang)
+            }
+            "pattern" => wordle_obj = WordleCLI::new(Actions::Pattern, input, lang),
+            "staticLetters" => wordle_obj = WordleCLI::new(Actions::StaticLetters, input, lang),
+            _ => wordle_obj = WordleCLI::new(Actions::NoAction, String::from(" :( "), lang),
+        };
+        println!("{}", wordle_obj);
+        match query_words(wordle_obj, vec![]).await {
+            Ok(response) => {
+                println!("{:?}", response)
+            }
+            Err(_) => {
+                println!("error")
+            }
         }
-        "pattern" => wordle_obj = WordleCLI::new(Actions::Pattern, input, lang),
-        "staticLetters" => wordle_obj = WordleCLI::new(Actions::StaticLetters, input, lang),
-        _ => wordle_obj = WordleCLI::new(Actions::NoAction, String::from(" :( "), lang),
-    };
-
-    println!("{}", wordle_obj);
-
-    match query_words(wordle_obj, vec![]).await {
-        Ok(response) => {
-            println!("{:?}", response)
-        }
-        Err(_) => {
-            println!("error")
-        }
+        let duration = start.elapsed();
+        println!("Time elapsed {:?}", duration);
+        first_time = false;
     }
-    let duration = start.elapsed();
-    println!("Time elapsed {:?}", duration);
-    // first_time = false;
 }
