@@ -206,7 +206,7 @@ async fn query_words<'l>(
         None => {
             let queried_words = match get_words(input.lang).await {
                 Ok(value) => value,
-                Err(_) => panic!("this is a terrible mistake!"),
+                Err(_) => panic!("No words retrieved"),
             };
             word_list = queried_words;
         }
@@ -365,11 +365,9 @@ async fn main() {
         match action.as_str() {
             "firstLetter" => wordle_obj = WordleCLI::new(Actions::FirstLetter, &input, &lang),
             "lastLetter" => wordle_obj = WordleCLI::new(Actions::LastLetter, &input, &lang),
-            "containsLetters" => wordle_obj = WordleCLI::new(Actions::Contains, &input, &lang),
-            "containSingleLetter" => wordle_obj = WordleCLI::new(Actions::Contain, &input, &lang),
-            "filterByIncorrectWords" => {
-                wordle_obj = WordleCLI::new(Actions::IncorrectWords, &input, &lang)
-            }
+            "contains" => wordle_obj = WordleCLI::new(Actions::Contains, &input, &lang),
+            "contain" => wordle_obj = WordleCLI::new(Actions::Contain, &input, &lang),
+            "incorrectWords" => wordle_obj = WordleCLI::new(Actions::IncorrectWords, &input, &lang),
             "pattern" => wordle_obj = WordleCLI::new(Actions::Pattern, &input, &lang),
             "staticLetters" => wordle_obj = WordleCLI::new(Actions::StaticLetters, &input, &lang),
             _ => wordle_obj = WordleCLI::new(Actions::NoAction, &String::from(" :( "), &lang),
