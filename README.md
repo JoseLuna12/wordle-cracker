@@ -24,4 +24,4 @@ suported languages:
 - <a>
 - <a,b,c,d>
 - <hello,words,test>
-- <_e_l_> (pattern)
+- <_ e _ l _> (hello, no spaces)
