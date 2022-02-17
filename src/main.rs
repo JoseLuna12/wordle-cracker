@@ -2,6 +2,12 @@ extern crate reqwest;
 extern crate scraper;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+use std::io::Write;
+use std::str;
+
 use std::io;
 
 use scraper::{Html, Selector};
@@ -158,8 +164,8 @@ async fn query_web_scrapping(
     Ok(word_list)
 }
 
-async fn get_words<'l>(lang: &'l Langs) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let query_values = match lang {
+fn get_query_object<'l>(lang: &'l Langs) -> QueryObject {
+    match lang {
         Langs::En => QueryObject {
             url: String::from("https://wordfind.com/length/5-letter-words"),
             selector: String::from("li.dl>a"),
@@ -168,7 +174,11 @@ async fn get_words<'l>(lang: &'l Langs) -> Result<Vec<String>, Box<dyn std::erro
             url: String::from("https://muchaspalabras.com/5-letras/diccionario"),
             selector: String::from("ul.inline-list.words.group0.sort>li>a"),
         },
-    };
+    }
+}
+
+async fn get_words<'l>(lang: &'l Langs) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let query_values = get_query_object(&lang);
     let mut word_list: Vec<String> = Vec::new();
 
     match lang {
@@ -333,11 +343,50 @@ impl fmt::Display for Langs {
     }
 }
 
+async fn save_words_file<'l>(input: &WordleCLI<'l>) -> std::io::Result<()> {
+    println!("writing...");
+    let mut word_list: String = String::new();
+
+    match get_words(&input.lang).await {
+        Ok(value) => {
+            for v in value {
+                word_list.push_str(&format!("{}:", &v));
+            }
+        }
+        Err(_) => {}
+    };
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(format!("./{}.txt", &input.lang))
+        .expect("Unable to open file");
+
+    file.write_all(word_list.as_bytes())?;
+
+    Ok(())
+}
+
+fn read_words_file<'l>(input: &WordleCLI<'l>) -> std::io::Result<Vec<String>> {
+    println!("reading...");
+    let mut file = File::open(format!("{}.txt", &input.lang))?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    let words: Vec<String> = contents
+        .split(":")
+        .collect::<Vec<&str>>()
+        .into_iter()
+        .map(|v| String::from(v))
+        .collect();
+
+    Ok(words)
+}
+
 #[tokio::main]
 async fn main() {
     let lang_input = std::env::args().nth(1).expect("no lang given");
     let mut action = std::env::args().nth(2).expect("no action given");
     let mut input = std::env::args().nth(3).expect("no input given");
+    let from_local = std::env::args().nth(4).unwrap_or(String::from("false"));
 
     let mut wordle_obj: WordleCLI;
     let lang: Langs = match lang_input.as_str() {
@@ -348,6 +397,8 @@ async fn main() {
 
     let mut first_time = true;
     let mut filtered_words: Vec<String> = vec![String::new()];
+    let mut filtered_option: Option<&Vec<String>>;
+    let mut words_from_local = Vec::new();
 
     loop {
         if !first_time {
@@ -361,6 +412,7 @@ async fn main() {
 
             action = values[0].to_string();
             input = String::from(values[1].to_string().trim_end());
+            print!("{esc}c", esc = 27 as char);
         }
 
         match action.as_str() {
@@ -375,6 +427,27 @@ async fn main() {
             "incorrectWords" => wordle_obj = WordleCLI::new(Actions::IncorrectWords, &input, &lang),
             "pattern" => wordle_obj = WordleCLI::new(Actions::Pattern, &input, &lang),
             "staticLetters" => wordle_obj = WordleCLI::new(Actions::StaticLetters, &input, &lang),
+            "save" => {
+                println!("save words command accepted");
+                wordle_obj = WordleCLI::new(Actions::StaticLetters, &input, &lang);
+                match save_words_file(&wordle_obj).await {
+                    Ok(_) => println!("correct"),
+                    Err(err) => println!("error: {}", err),
+                }
+                break;
+            }
+            "read" => {
+                wordle_obj = WordleCLI::new(Actions::StaticLetters, &input, &lang);
+                match read_words_file(&wordle_obj) {
+                    Ok(words_local) => {
+                        println!("{:?}", words_local);
+                    }
+                    Err(_) => {
+                        println!("error")
+                    }
+                }
+                break;
+            }
             _ => wordle_obj = WordleCLI::new(Actions::NoAction, &String::from(" :( "), &lang),
         };
 
@@ -385,12 +458,22 @@ async fn main() {
             }
             _ => println!("{}", wordle_obj),
         }
-
-        let filtered_option: Option<&Vec<String>>;
-        if first_time {
-            filtered_option = None;
+        if from_local == String::from("false") {
+            if first_time {
+                filtered_option = None;
+            } else {
+                filtered_option = Some(&filtered_words)
+            }
         } else {
-            filtered_option = Some(&filtered_words)
+            if words_from_local.len() == 0 {
+                words_from_local = match read_words_file(&wordle_obj) {
+                    Ok(words_local) => words_local,
+                    Err(_) => vec![String::new()],
+                };
+                filtered_option = Some(&words_from_local);
+            } else {
+                filtered_option = Some(&filtered_words)
+            }
         }
 
         match query_words(&wordle_obj, filtered_option).await {
